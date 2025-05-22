@@ -20,3 +20,9 @@ CREATE TABLE tbl_travel_image
     CONSTRAINT FOREIGN KEY (travel_no) REFERENCES tbl_travel (no)
         ON DELETE CASCADE
 );
+
+select t.*, ti.no as tino, ti.filename, ti.travel_no
+from tbl_travel t
+         left outer join tbl_travel_image ti
+                         on t.no = ti.travel_no
+where t.no = 1;

@@ -13,9 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 
-public class TravelDaoImpl implements TravelDao{
+public class TravelDaoImpl implements TravelDao {
 
     Connection conn = JDBCUtil.getConnection();
+
     @Override
     public void insert(TravelVO travel) {
         String sql = "insert into tbl_travel(no, district,title,description, address, phone) values(?,?,?,?,?,?)";
@@ -72,8 +73,7 @@ public class TravelDaoImpl implements TravelDao{
         return districts;
     }
 
-    private TravelVO map(ResultSet rs) throws SQLException
-    {
+    private TravelVO map(ResultSet rs) throws SQLException {
         return TravelVO.builder()
                 .no(rs.getLong("no"))
                 .district(rs.getString("district"))
@@ -144,8 +144,53 @@ public class TravelDaoImpl implements TravelDao{
 
     }
 
+    private TravelImageVO mapImage(ResultSet rs) throws SQLException {
+        return TravelImageVO.builder()
+                .no(rs.getLong("tino"))
+                .filename(rs.getString("filename"))
+                .travelNo(rs.getLong("travel_no"))
+                .build();
+    }
+
+
     @Override
     public Optional<TravelVO> getTravel(Long no) {
-        return Optional.empty();
+        TravelVO travel = null;
+        String sql = """
+                        
+                select t.*, ti.no as tino, ti.filename, ti.travel_no
+                        from tbl_travel t
+                                    left outer join tbl_travel_image ti
+                                            on t.no = ti.travel_no
+                        where t.no = ?;
+                        """;
+        try (PreparedStatement pstmt = conn.prepareStatement
+                (sql)) {
+            pstmt.setLong(1, no);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    travel = map(rs);
+                    List<TravelImageVO> images = new ArrayList<>();
+                    try {
+                        do {
+                            TravelImageVO image = mapImage
+                                    (rs);
+                            images.add(image);
+                        } while (rs.next());
+                    } catch (SQLException e) {
+                    // 이미지가 없는 경우 발생
+                    }
+                    travel.setImages(images);
+                    return Optional.of(travel);
+                } else {
+                    return Optional.empty();
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException
+                    (e);
+        }
     }
+
 }
+
